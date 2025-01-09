@@ -1,7 +1,7 @@
 const db = require('../models');
 const { Meeting, Notification } = db;
 const { Op } = db.Sequelize;
-const { startOfDay, endOfDay, addMinutes, format, parseISO, setHours, setMinutes } = require('date-fns');
+const { startOfDay, endOfDay, addMinutes, format, parseISO } = require('date-fns');
 
 // Generate time slots for a given date
 const generateTimeSlots = (baseDate, duration = 30) => {
@@ -108,7 +108,7 @@ exports.getAvailability = async (req, res) => {
 exports.createMeeting = async (req, res) => {
   try {
     const { hostId, participantId, startTime, duration, title, description, timezone } = req.body;
-    console.log('Creating meeting:', { hostId, participantId, startTime, duration, title, timezone });
+    console.log('Creating meeting with data:', req.body);
 
     if (!hostId || !participantId || !startTime || !duration || !title) {
       return res.status(400).json({ 
@@ -120,13 +120,30 @@ exports.createMeeting = async (req, res) => {
 
     // Parse the start time
     const meetingStartTime = new Date(startTime);
+    if (isNaN(meetingStartTime.getTime())) {
+      return res.status(400).json({
+        error: 'Invalid start time',
+        details: 'The provided start time could not be parsed',
+        received: startTime
+      });
+    }
+
+    // Validate duration
+    const durationNum = parseInt(duration);
+    if (isNaN(durationNum) || durationNum <= 0) {
+      return res.status(400).json({
+        error: 'Invalid duration',
+        details: 'Duration must be a positive number',
+        received: duration
+      });
+    }
     
     // Create the meeting
     const meeting = await Meeting.create({
       hostId,
       participantId,
       startTime: meetingStartTime,
-      duration: parseInt(duration),
+      duration: durationNum,
       title,
       description: description || '',
       status: 'scheduled',
