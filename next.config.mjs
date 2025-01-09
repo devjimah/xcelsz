@@ -6,7 +6,7 @@ const nextConfig = {
       {
         source: '/api/:path*',
         destination: process.env.NODE_ENV === 'production'
-          ? 'https://xcelsz-task-server.onrender.com/api/:path*'
+          ? 'https://xcelsz.onrender.com/api/:path*'
           : 'http://localhost:3001/api/:path*'
       }
     ];

@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 const db = require('./models');
 
 const app = express();
+// Render assigns a dynamic port, so we should use that when available
 const PORT = process.env.PORT || 3001;
 
 // Rate limiting
@@ -35,7 +36,11 @@ app.use(express.urlencoded({ extended: true }));
 
 // Root route
 app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to XcelSz API' });
+  res.json({ 
+    message: 'Welcome to XcelSz API',
+    environment: process.env.NODE_ENV,
+    port: PORT
+  });
 });
 
 // Routes
