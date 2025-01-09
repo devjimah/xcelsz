@@ -54,8 +54,12 @@ app.get('/', (req, res) => {
 });
 
 // Routes
-app.use('/api/meetings', require('./routes/meetings'));
-app.use('/api/notifications', require('./routes/notifications'));
+const meetingsRouter = require('./routes/meetings');
+const notificationsRouter = require('./routes/notifications');
+
+// API routes
+app.use('/api/meetings', meetingsRouter);
+app.use('/api/notifications', notificationsRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
