@@ -22,7 +22,8 @@ app.use(cors({
     const allowedOrigins = [
       'http://localhost:3000',
       'https://xcelsz.onrender.com',
-      'https://xcelsz-three.vercel.app'
+      'https://xcelsz-three.vercel.app',
+      'https://xcelsz.vercel.app'
     ];
     
     // Allow requests with no origin (like mobile apps or curl requests)
