@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: xcelsz-task-server
+    env: node
+    buildCommand: cd server && npm install && npm run build
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+    healthCheckPath: /
+    autoDeploy: true

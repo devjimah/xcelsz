@@ -3,9 +3,12 @@
   "version": "1.0.0",
   "description": "Backend server for xcelsz-task",
   "main": "src/server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "start": "node src/server.js",
-    "build": "npm install",
+    "build": "npm install && npm run migrate",
     "dev": "nodemon src/server.js",
     "migrate": "sequelize db:migrate",
     "migrate:undo": "sequelize db:migrate:undo",
@@ -17,7 +20,10 @@
     "express": "^4.18.2",
     "sequelize": "^6.37.5",
     "sqlite3": "^5.1.7",
-    "uuid": "^11.0.4"
+    "uuid": "^11.0.4",
+    "compression": "^1.7.4",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5"
   },
   "devDependencies": {
     "nodemon": "^3.0.2",
