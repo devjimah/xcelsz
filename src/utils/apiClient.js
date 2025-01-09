@@ -7,7 +7,8 @@ const defaultHeaders = {
 
 const defaultOptions = {
   credentials: 'include',
-  headers: defaultHeaders
+  headers: defaultHeaders,
+  mode: 'cors'
 };
 
 const handleResponse = async (response) => {
