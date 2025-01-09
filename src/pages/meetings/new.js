@@ -3,6 +3,7 @@ import { Container, Typography, Box, Alert } from '@mui/material';
 import CreateMeetingForm from '@/components/CreateMeetingForm';
 import Layout from '@/components/Layout';
 import { useRouter } from 'next/router';
+import apiClient from '@/utils/apiClient';
 
 export default function NewMeeting() {
   const router = useRouter();
@@ -12,27 +13,18 @@ export default function NewMeeting() {
 
   const handleSubmit = async (meetingData) => {
     try {
-      const response = await fetch('/api/meetings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...meetingData,
-          hostId: userId,
-          participantId: '456'
-        }),
+      const response = await apiClient.post('meetings', {
+        ...meetingData,
+        hostId: userId,
+        participantId: '456' // TODO: Replace with actual participant selection
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create meeting');
-      }
-
-      if (!data.meeting) {
+      if (!response.meeting) {
         throw new Error('Invalid server response');
       }
+
+      // Wait a moment for the database to update
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Redirect to meetings page after successful creation
       router.push('/meetings');
@@ -49,11 +41,11 @@ export default function NewMeeting() {
         <Typography variant="h4" component="h1" gutterBottom>
           Schedule New Meeting
         </Typography>
-        
+
         {error && (
-          <Box mb={3}>
-            <Alert severity="error">{error}</Alert>
-          </Box>
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
         )}
 
         <CreateMeetingForm onSubmit={handleSubmit} userId={userId} />

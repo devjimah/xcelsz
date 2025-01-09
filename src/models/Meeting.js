@@ -3,8 +3,7 @@
 module.exports = (sequelize, DataTypes) => {
   const Meeting = sequelize.define('Meeting', {
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.STRING,
       primaryKey: true
     },
     title: {
@@ -23,11 +22,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     hostId: {
-      type: DataTypes.UUID,
+      type: DataTypes.STRING,
       allowNull: false
     },
     participantId: {
-      type: DataTypes.UUID,
+      type: DataTypes.STRING,
       allowNull: false
     },
     status: {

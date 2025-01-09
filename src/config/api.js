@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://xcelsz.onrender.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://xcelsz-api.onrender.com';
 
 export const getApiUrl = (path) => {
   // Remove leading slash if present
