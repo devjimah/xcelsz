@@ -18,15 +18,18 @@ const limiter = rateLimit({
 
 // CORS configuration
 const corsOptions = {
-  origin: '*', // Allow all origins temporarily
+  origin: ['http://localhost:3000', 'https://xcelsz.onrender.com'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-  maxAge: 86400 // Cache preflight requests for 24 hours
+  optionsSuccessStatus: 200
 };
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: false
+}));
 app.use(compression());
 app.use(limiter);
 app.use(cors(corsOptions));
@@ -51,8 +54,12 @@ app.get('/', (req, res) => {
 });
 
 // Routes
-app.use('/api/meetings', require('./routes/meetings'));
-app.use('/api/notifications', require('./routes/notifications'));
+const meetingsRouter = require('./routes/meetings');
+const notificationsRouter = require('./routes/notifications');
+
+// API routes
+app.use('/api/meetings', meetingsRouter);
+app.use('/api/notifications', notificationsRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -69,5 +76,6 @@ db.sequelize.sync().then(() => {
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV}`);
+    console.log('CORS origins:', corsOptions.origin);
   });
 });

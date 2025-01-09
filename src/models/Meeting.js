@@ -3,7 +3,8 @@
 module.exports = (sequelize, DataTypes) => {
   const Meeting = sequelize.define('Meeting', {
     id: {
-      type: DataTypes.STRING,
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true
     },
     title: {

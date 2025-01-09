@@ -1,18 +1,33 @@
 import { getApiUrl } from '../config/api';
 
+const handleResponse = async (response) => {
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    const error = new Error(errorData?.error || errorData?.message || `HTTP error! status: ${response.status}`);
+    error.status = response.status;
+    error.details = errorData?.details;
+    throw error;
+  }
+  return response.json();
+};
+
 const apiClient = {
-  async get(path) {
+  async get(path, params) {
     try {
-      const response = await fetch(getApiUrl(`api/${path}`), {
+      const url = new URL(getApiUrl(`api/${path}`));
+      if (params) {
+        Object.keys(params).forEach(key => 
+          url.searchParams.append(key, params[key])
+        );
+      }
+      console.log('Making GET request to:', url.toString());
+      const response = await fetch(url.toString(), {
         headers: {
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
         }
       });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || `HTTP error! status: ${response.status}`);
-      }
-      return response.json();
+      return handleResponse(response);
     } catch (error) {
       console.error('API Error:', error);
       throw error;
@@ -21,7 +36,9 @@ const apiClient = {
 
   async post(path, data) {
     try {
-      const response = await fetch(getApiUrl(`api/${path}`), {
+      const url = getApiUrl(`api/${path}`);
+      console.log('Making POST request to:', url, 'with data:', data);
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -29,51 +46,54 @@ const apiClient = {
         },
         body: JSON.stringify(data),
       });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || `HTTP error! status: ${response.status}`);
-      }
-      return response.json();
+      return handleResponse(response);
     } catch (error) {
       console.error('API Error:', error);
       throw error;
     }
   },
 
-  async put(path, data) {
+  async put(path, data, params) {
     try {
-      const response = await fetch(getApiUrl(`api/${path}`), {
+      const url = new URL(getApiUrl(`api/${path}`));
+      if (params) {
+        Object.keys(params).forEach(key => 
+          url.searchParams.append(key, params[key])
+        );
+      }
+      console.log('Making PUT request to:', url.toString(), 'with data:', data);
+      const response = await fetch(url.toString(), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify(data),
+        body: data ? JSON.stringify(data) : null,
       });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || `HTTP error! status: ${response.status}`);
-      }
-      return response.json();
+      return handleResponse(response);
     } catch (error) {
       console.error('API Error:', error);
       throw error;
     }
   },
 
-  async delete(path) {
+  async delete(path, params) {
     try {
-      const response = await fetch(getApiUrl(`api/${path}`), {
+      const url = new URL(getApiUrl(`api/${path}`));
+      if (params) {
+        Object.keys(params).forEach(key => 
+          url.searchParams.append(key, params[key])
+        );
+      }
+      console.log('Making DELETE request to:', url.toString());
+      const response = await fetch(url.toString(), {
         method: 'DELETE',
         headers: {
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
         }
       });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || `HTTP error! status: ${response.status}`);
-      }
-      return response.json();
+      return handleResponse(response);
     } catch (error) {
       console.error('API Error:', error);
       throw error;

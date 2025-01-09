@@ -3,7 +3,7 @@ import { Container, Grid, Paper, Box, useTheme } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import MeetingScheduler from '@/components/MeetingScheduler';
-import MeetingsList from '@/components/MeetingsList';
+import MeetingList from '@/components/MeetingList';
 
 export default function TestMeetings() {
   const [meetings, setMeetings] = useState([]);
@@ -75,7 +75,7 @@ export default function TestMeetings() {
                   border: `1px solid ${theme.palette.divider}`
                 }}
               >
-                <MeetingsList
+                <MeetingList
                   meetings={meetings}
                   onDelete={handleMeetingDeleted}
                   onRefresh={fetchMeetings}

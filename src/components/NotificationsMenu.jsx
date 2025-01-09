@@ -32,8 +32,8 @@ export default function NotificationsMenu({ userId = '123' }) {
     setLoading(true);
     setError('');
     try {
-      const data = await apiClient.get(`notifications?userId=${userId}`);
-      setNotifications(Array.isArray(data) ? data : []);
+      const response = await apiClient.get(`notifications?userId=${userId}`);
+      setNotifications(response.notifications || []);
     } catch (err) {
       console.error('Error fetching notifications:', err);
       setError('Failed to load notifications');
@@ -61,14 +61,7 @@ export default function NotificationsMenu({ userId = '123' }) {
     if (!userId || notifications.length === 0) return;
 
     try {
-      const promises = notifications.map(notification =>
-        apiClient.put('notifications', {
-          notificationId: notification.id,
-          userId
-        })
-      );
-
-      await Promise.all(promises);
+      await apiClient.put('notifications/read-all', null, { userId });
       fetchNotifications();
     } catch (err) {
       console.error('Error marking notifications as read:', err);
@@ -76,18 +69,39 @@ export default function NotificationsMenu({ userId = '123' }) {
     }
   };
 
+  const handleMarkAsRead = async (notificationId) => {
+    if (!userId || !notificationId) return;
+
+    try {
+      await apiClient.put(`notifications/${notificationId}/read?userId=${userId}`);
+      fetchNotifications();
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+      setError('Failed to mark notification as read');
+    }
+  };
+
   const getNotificationIcon = (type) => {
     switch (type) {
       case 'MEETING_INVITATION':
         return '🤝';
-      case 'MEETING_UPDATED':
+      case 'MEETING_UPDATE':
         return '📝';
       case 'MEETING_CANCELLED':
         return '❌';
-      case 'MEETING_REMINDER':
+      case 'MEETING_RESCHEDULE':
         return '⏰';
       default:
         return '📢';
+    }
+  };
+
+  const formatDate = (date) => {
+    try {
+      return format(new Date(date), 'PPp');
+    } catch (err) {
+      console.error('Error formatting date:', err);
+      return 'Invalid date';
     }
   };
 
@@ -112,68 +126,76 @@ export default function NotificationsMenu({ userId = '123' }) {
         PaperProps={{
           style: {
             maxHeight: 400,
-            width: '350px',
+            width: 360,
           },
         }}
       >
-        <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h6" component="div">
-            Notifications
-          </Typography>
+        <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6">Notifications</Typography>
           {unreadCount > 0 && (
-            <Button
-              size="small"
-              onClick={handleMarkAllRead}
-              sx={{ mt: 1 }}
-            >
+            <Button size="small" onClick={handleMarkAllRead}>
               Mark all as read
             </Button>
           )}
         </Box>
 
-        {loading ? (
+        <Divider />
+
+        {loading && (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
             <CircularProgress size={24} />
           </Box>
-        ) : error ? (
-          <MenuItem>
-            <Typography color="error">{error}</Typography>
-          </MenuItem>
-        ) : notifications.length === 0 ? (
-          <MenuItem>
-            <Typography>No notifications</Typography>
-          </MenuItem>
-        ) : (
-          <List sx={{ p: 0 }}>
-            {notifications.map((notification, index) => (
-              <div key={notification.id}>
-                {index > 0 && <Divider />}
-                <ListItem>
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <span>{getNotificationIcon(notification.type)}</span>
-                        <Typography variant="body1">
-                          {notification.message}
-                        </Typography>
-                        {!notification.read && (
-                          <CircleIcon
-                            sx={{
-                              color: 'primary.main',
-                              fontSize: 8,
-                              ml: 'auto'
-                            }}
-                          />
-                        )}
-                      </Box>
-                    }
-                    secondary={format(new Date(notification.createdAt), 'PPp')}
-                  />
-                </ListItem>
-              </div>
-            ))}
-          </List>
         )}
+
+        {error && (
+          <Box sx={{ p: 2 }}>
+            <Typography color="error">{error}</Typography>
+          </Box>
+        )}
+
+        {!loading && !error && notifications.length === 0 && (
+          <Box sx={{ p: 2 }}>
+            <Typography color="textSecondary">No notifications</Typography>
+          </Box>
+        )}
+
+        <List sx={{ p: 0 }}>
+          {notifications.map((notification) => (
+            <ListItem
+              key={notification.id}
+              onClick={() => handleMarkAsRead(notification.id)}
+              sx={{
+                cursor: 'pointer',
+                bgcolor: notification.read ? 'transparent' : 'action.hover',
+                '&:hover': {
+                  bgcolor: 'action.selected',
+                },
+              }}
+            >
+              <ListItemText
+                primary={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <span>{getNotificationIcon(notification.type)}</span>
+                    <Typography variant="subtitle2">{notification.title}</Typography>
+                    {!notification.read && (
+                      <CircleIcon sx={{ fontSize: 8, color: 'primary.main' }} />
+                    )}
+                  </Box>
+                }
+                secondary={
+                  <>
+                    <Typography variant="body2" color="textPrimary">
+                      {notification.message}
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary">
+                      {formatDate(notification.createdAt)}
+                    </Typography>
+                  </>
+                }
+              />
+            </ListItem>
+          ))}
+        </List>
       </Menu>
     </>
   );

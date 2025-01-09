@@ -1,8 +1,7 @@
 const db = require('../models');
 const { Meeting, Notification } = db;
 const { Op } = db.Sequelize;
-const { startOfDay, endOfDay, addMinutes, format, parseISO, setHours, setMinutes } = require('date-fns');
-const { zonedTimeToUtc, utcToZonedTime } = require('date-fns-tz');
+const { startOfDay, endOfDay, addMinutes, format, parseISO } = require('date-fns');
 
 // Generate time slots for a given date
 const generateTimeSlots = (baseDate, duration = 30) => {
@@ -51,15 +50,12 @@ exports.getAvailability = async (req, res) => {
       });
     }
 
-    // Parse the date and set to local timezone
+    // Parse the date
     const requestDate = parseISO(date);
     console.log('Parsed request date:', requestDate);
-
-    const zonedDate = utcToZonedTime(requestDate, timezone);
-    console.log('Zoned date:', zonedDate);
     
     // Get all slots for the day with the requested duration
-    const allSlots = generateTimeSlots(zonedDate, parseInt(duration));
+    const allSlots = generateTimeSlots(requestDate, parseInt(duration));
 
     // Get booked meetings for the date
     const bookedMeetings = await Meeting.findAll({
@@ -70,8 +66,8 @@ exports.getAvailability = async (req, res) => {
         ],
         startTime: {
           [Op.between]: [
-            startOfDay(zonedDate),
-            endOfDay(zonedDate)
+            startOfDay(requestDate),
+            endOfDay(requestDate)
           ]
         }
       }
@@ -94,12 +90,11 @@ exports.getAvailability = async (req, res) => {
     const response = { 
       availableSlots,
       timezone,
-      date: format(zonedDate, 'yyyy-MM-dd')
+      date: format(requestDate, 'yyyy-MM-dd')
     };
 
     console.log('Sending response:', response);
     res.json(response);
-
   } catch (error) {
     console.error('Error getting availability:', error);
     res.status(500).json({ 
@@ -112,39 +107,75 @@ exports.getAvailability = async (req, res) => {
 
 exports.createMeeting = async (req, res) => {
   try {
-    const { hostId, participantId, startTime, duration, title, description } = req.body;
-    console.log('Creating meeting:', { hostId, participantId, startTime, duration, title });
+    const { hostId, participantId, startTime, duration, title, description, timezone } = req.body;
+    console.log('Creating meeting with data:', req.body);
+
+    if (!hostId || !participantId || !startTime || !duration || !title) {
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        required: ['hostId', 'participantId', 'startTime', 'duration', 'title'],
+        received: { hostId, participantId, startTime, duration, title }
+      });
+    }
 
     // Parse the start time
     const meetingStartTime = new Date(startTime);
-    
-    // Create the meeting
-    const meeting = await Meeting.create({
-      hostId,
-      participantId,
-      startTime: meetingStartTime,
-      duration: parseInt(duration),
-      title,
-      description,
-      status: 'scheduled'
+    if (isNaN(meetingStartTime.getTime())) {
+      return res.status(400).json({
+        error: 'Invalid start time',
+        details: 'The provided start time could not be parsed',
+        received: startTime
+      });
+    }
+
+    // Validate duration
+    const durationNum = parseInt(duration);
+    if (isNaN(durationNum) || durationNum <= 0) {
+      return res.status(400).json({
+        error: 'Invalid duration',
+        details: 'Duration must be a positive number',
+        received: duration
+      });
+    }
+
+    // Start a transaction
+    const result = await db.sequelize.transaction(async (t) => {
+      // Create the meeting
+      const meeting = await Meeting.create({
+        hostId,
+        participantId,
+        startTime: meetingStartTime,
+        duration: durationNum,
+        title,
+        description: description || '',
+        status: 'scheduled',
+        timezone: timezone || 'UTC'
+      }, { transaction: t });
+
+      console.log('Created meeting:', meeting.toJSON());
+
+      // Create notification for participant
+      const notification = await Notification.create({
+        userId: participantId,
+        type: 'MEETING_INVITATION',
+        title: 'New Meeting Invitation',
+        message: `You have been invited to a meeting: ${title}`,
+        relatedId: meeting.id,
+        read: false
+      }, { transaction: t });
+
+      console.log('Created notification:', notification.toJSON());
+
+      return { meeting, notification };
     });
 
-    console.log('Created meeting:', meeting.toJSON());
-
-    // Create notification for participant
-    await Notification.create({
-      userId: participantId,
-      type: 'MEETING_INVITATION',
-      message: `You have been invited to a meeting: ${title}`,
-      meetingId: meeting.id
-    });
-
-    res.status(201).json({ meeting });
+    res.status(201).json({ meeting: result.meeting });
   } catch (error) {
     console.error('Error creating meeting:', error);
     res.status(500).json({ 
       error: 'Failed to create meeting',
-      details: error.message 
+      details: error.message,
+      stack: error.stack
     });
   }
 };
@@ -152,19 +183,30 @@ exports.createMeeting = async (req, res) => {
 exports.getMeetings = async (req, res) => {
   try {
     const { userId } = req.query;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
     const meetings = await Meeting.findAll({
       where: {
-        [db.Sequelize.Op.or]: [
+        [Op.or]: [
           { hostId: userId },
           { participantId: userId }
         ]
       },
       order: [['startTime', 'ASC']]
     });
+
+    console.log(`Found ${meetings.length} meetings for user ${userId}`);
     res.json({ meetings });
   } catch (error) {
     console.error('Error fetching meetings:', error);
-    res.status(500).json({ error: 'Failed to fetch meetings' });
+    res.status(500).json({ 
+      error: 'Failed to fetch meetings',
+      details: error.message,
+      stack: error.stack
+    });
   }
 };
 
@@ -178,7 +220,11 @@ exports.getMeeting = async (req, res) => {
     res.json({ meeting });
   } catch (error) {
     console.error('Error fetching meeting:', error);
-    res.status(500).json({ error: 'Failed to fetch meeting' });
+    res.status(500).json({ 
+      error: 'Failed to fetch meeting',
+      details: error.message,
+      stack: error.stack
+    });
   }
 };
 
@@ -192,28 +238,52 @@ exports.updateMeeting = async (req, res) => {
       return res.status(404).json({ error: 'Meeting not found' });
     }
 
-    await meeting.update({
-      startTime: startTime || meeting.startTime,
-      duration: duration || meeting.duration,
-      title: title || meeting.title,
-      description: description || meeting.description,
-      status: status || meeting.status
+    // Start a transaction
+    const result = await db.sequelize.transaction(async (t) => {
+      // Update the meeting
+      await meeting.update({
+        startTime: startTime || meeting.startTime,
+        duration: duration || meeting.duration,
+        title: title || meeting.title,
+        description: description || meeting.description,
+        status: status || meeting.status
+      }, { transaction: t });
+
+      // Create notification for status updates
+      if (status) {
+        await Notification.create({
+          userId: meeting.participantId,
+          type: 'MEETING_UPDATE',
+          title: 'Meeting Update',
+          message: `Meeting "${meeting.title}" has been ${status.toLowerCase()}`,
+          relatedId: meeting.id,
+          read: false
+        }, { transaction: t });
+      }
+
+      // Create notification for time/duration updates
+      if (startTime || duration) {
+        await Notification.create({
+          userId: meeting.participantId,
+          type: 'MEETING_RESCHEDULE',
+          title: 'Meeting Rescheduled',
+          message: `Meeting "${meeting.title}" has been rescheduled`,
+          relatedId: meeting.id,
+          read: false
+        }, { transaction: t });
+      }
+
+      return { meeting };
     });
 
-    // Create notification for status updates
-    if (status) {
-      await Notification.create({
-        userId: meeting.participantId,
-        type: 'MEETING_UPDATE',
-        message: `Meeting "${meeting.title}" has been ${status.toLowerCase()}`,
-        meetingId: meeting.id
-      });
-    }
-
-    res.json({ meeting });
+    res.json({ meeting: result.meeting });
   } catch (error) {
     console.error('Error updating meeting:', error);
-    res.status(500).json({ error: 'Failed to update meeting' });
+    res.status(500).json({ 
+      error: 'Failed to update meeting',
+      details: error.message,
+      stack: error.stack
+    });
   }
 };
 
@@ -226,18 +296,28 @@ exports.deleteMeeting = async (req, res) => {
       return res.status(404).json({ error: 'Meeting not found' });
     }
 
-    // Create notification for cancellation
-    await Notification.create({
-      userId: meeting.participantId,
-      type: 'MEETING_CANCELLED',
-      message: `Meeting "${meeting.title}" has been cancelled`,
-      meetingId: meeting.id
+    // Start a transaction
+    await db.sequelize.transaction(async (t) => {
+      await meeting.update({ status: 'cancelled' }, { transaction: t });
+      
+      // Notify participants
+      await Notification.create({
+        userId: meeting.participantId,
+        type: 'MEETING_CANCELLED',
+        title: 'Meeting Cancelled',
+        message: `Meeting "${meeting.title}" has been cancelled`,
+        relatedId: meeting.id,
+        read: false
+      }, { transaction: t });
     });
 
-    await meeting.destroy();
-    res.json({ message: 'Meeting deleted successfully' });
+    res.json({ message: 'Meeting cancelled successfully' });
   } catch (error) {
     console.error('Error deleting meeting:', error);
-    res.status(500).json({ error: 'Failed to delete meeting' });
+    res.status(500).json({ 
+      error: 'Failed to delete meeting',
+      details: error.message,
+      stack: error.stack
+    });
   }
 };

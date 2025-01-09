@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import MeetingsCalendar from '@/components/MeetingsCalendar';
-import MeetingsList from '@/components/MeetingsList';
+import MeetingList from '@/components/MeetingList';
 import Layout from '@/components/Layout';
 import { useRouter } from 'next/router';
 import apiClient from '@/utils/apiClient';
@@ -58,10 +58,23 @@ export default function MeetingsPage() {
     try {
       await apiClient.delete(`meetings/${meetingId}`);
       // Refetch meetings after successful deletion
-      setTimeout(fetchMeetings, 500);
+      await fetchMeetings();
     } catch (error) {
       console.error('Error deleting meeting:', error);
       setError('Failed to delete meeting. Please try again.');
+      throw error; // Propagate error to component
+    }
+  };
+
+  const handleUpdateMeeting = async (meetingId, updatedData) => {
+    try {
+      await apiClient.put(`meetings/${meetingId}`, updatedData);
+      // Refetch meetings after successful update
+      await fetchMeetings();
+    } catch (error) {
+      console.error('Error updating meeting:', error);
+      setError('Failed to update meeting. Please try again.');
+      throw error; // Propagate error to component
     }
   };
 
@@ -101,8 +114,8 @@ export default function MeetingsPage() {
           </Alert>
         )}
 
-        {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+        {loading && !meetings.length && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <CircularProgress />
           </Box>
         )}
@@ -115,9 +128,10 @@ export default function MeetingsPage() {
           />
         </TabPanel>
         <TabPanel value={activeTab} index={1}>
-          <MeetingsList 
+          <MeetingList 
             meetings={meetings}
             onDelete={handleDeleteMeeting}
+            onUpdate={handleUpdateMeeting}
             onRefresh={fetchMeetings}
           />
         </TabPanel>
