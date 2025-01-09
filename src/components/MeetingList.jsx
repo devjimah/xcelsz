@@ -19,7 +19,7 @@ import {
 import MeetingCard from './MeetingCard';
 import UpdateMeetingForm from './UpdateMeetingForm';
 
-export default function MeetingList({ meetings = [], onDelete, onRefresh }) {
+export default function MeetingList({ meetings = [], onDelete, onUpdate, onRefresh }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('all');
@@ -30,7 +30,7 @@ export default function MeetingList({ meetings = [], onDelete, onRefresh }) {
     setLoading(true);
     setError('');
     try {
-      await onRefresh();
+      await onUpdate?.(selectedMeeting.id, updatedData);
       setShowUpdateForm(false);
       setSelectedMeeting(null);
     } catch (err) {

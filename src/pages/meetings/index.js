@@ -58,10 +58,23 @@ export default function MeetingsPage() {
     try {
       await apiClient.delete(`meetings/${meetingId}`);
       // Refetch meetings after successful deletion
-      setTimeout(fetchMeetings, 500);
+      await fetchMeetings();
     } catch (error) {
       console.error('Error deleting meeting:', error);
       setError('Failed to delete meeting. Please try again.');
+      throw error; // Propagate error to component
+    }
+  };
+
+  const handleUpdateMeeting = async (meetingId, updatedData) => {
+    try {
+      await apiClient.put(`meetings/${meetingId}`, updatedData);
+      // Refetch meetings after successful update
+      await fetchMeetings();
+    } catch (error) {
+      console.error('Error updating meeting:', error);
+      setError('Failed to update meeting. Please try again.');
+      throw error; // Propagate error to component
     }
   };
 
@@ -101,8 +114,8 @@ export default function MeetingsPage() {
           </Alert>
         )}
 
-        {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+        {loading && !meetings.length && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <CircularProgress />
           </Box>
         )}
@@ -118,6 +131,7 @@ export default function MeetingsPage() {
           <MeetingList 
             meetings={meetings}
             onDelete={handleDeleteMeeting}
+            onUpdate={handleUpdateMeeting}
             onRefresh={fetchMeetings}
           />
         </TabPanel>
