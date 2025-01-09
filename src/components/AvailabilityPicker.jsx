@@ -6,12 +6,13 @@ import {
   Typography, 
   CircularProgress,
   Alert,
-  Paper
+  Paper,
+  TextField
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import apiClient from '@/utils/apiClient';
 
 export default function AvailabilityPicker({ onTimeSelect, userId }) {
@@ -48,26 +49,23 @@ export default function AvailabilityPicker({ onTimeSelect, userId }) {
   };
 
   const handleTimeSelect = (slot) => {
-    onTimeSelect(new Date(slot.startTime));
+    onTimeSelect({
+      startTime: slot.startTime,
+      endTime: slot.endTime
+    });
   };
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 800 }}>
+    <Box sx={{ mt: 2 }}>
       <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <Box mb={3}>
-          <DatePicker
-            label="Select Date"
-            value={selectedDate}
-            onChange={handleDateChange}
-            disablePast
-            slotProps={{
-              textField: {
-                fullWidth: true,
-                sx: { '& .MuiOutlinedInput-root': { borderRadius: 2 } }
-              }
-            }}
-          />
-        </Box>
+        <DatePicker
+          label="Select Date"
+          value={selectedDate}
+          onChange={handleDateChange}
+          renderInput={(params) => <TextField {...params} fullWidth />}
+          disablePast
+          sx={{ mb: 3 }}
+        />
       </LocalizationProvider>
 
       {error && (
@@ -77,7 +75,7 @@ export default function AvailabilityPicker({ onTimeSelect, userId }) {
       )}
 
       {loading ? (
-        <Box display="flex" justifyContent="center" my={4}>
+        <Box display="flex" justifyContent="center" p={3}>
           <CircularProgress />
         </Box>
       ) : (
@@ -102,7 +100,7 @@ export default function AvailabilityPicker({ onTimeSelect, userId }) {
                   onClick={() => handleTimeSelect(slot)}
                 >
                   <Typography variant="body1">
-                    {format(new Date(slot.startTime), 'h:mm a')}
+                    {format(parseISO(slot.startTime), 'h:mm a')}
                   </Typography>
                 </Paper>
               </Grid>
