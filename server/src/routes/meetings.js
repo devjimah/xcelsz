@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const meetingsController = require('../controllers/meetings');
 
+// GET /api/meetings/availability
+router.get('/availability', meetingsController.getAvailability);
+
 // GET /api/meetings
 router.get('/', meetingsController.getMeetings);
 
