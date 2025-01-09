@@ -3,18 +3,25 @@ import { getApiUrl } from '../config/api';
 const handleResponse = async (response) => {
   if (!response.ok) {
     const errorData = await response.json().catch(() => null);
-    const error = new Error(errorData?.message || `HTTP error! status: ${response.status}`);
+    const error = new Error(errorData?.error || errorData?.message || `HTTP error! status: ${response.status}`);
     error.status = response.status;
+    error.details = errorData?.details;
     throw error;
   }
   return response.json();
 };
 
 const apiClient = {
-  async get(path) {
+  async get(path, params) {
     try {
-      console.log('Making GET request to:', getApiUrl(`api/${path}`));
-      const response = await fetch(getApiUrl(`api/${path}`), {
+      const url = new URL(getApiUrl(`api/${path}`));
+      if (params) {
+        Object.keys(params).forEach(key => 
+          url.searchParams.append(key, params[key])
+        );
+      }
+      console.log('Making GET request to:', url.toString());
+      const response = await fetch(url.toString(), {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
@@ -29,8 +36,9 @@ const apiClient = {
 
   async post(path, data) {
     try {
-      console.log('Making POST request to:', getApiUrl(`api/${path}`), 'with data:', data);
-      const response = await fetch(getApiUrl(`api/${path}`), {
+      const url = getApiUrl(`api/${path}`);
+      console.log('Making POST request to:', url, 'with data:', data);
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -45,16 +53,22 @@ const apiClient = {
     }
   },
 
-  async put(path, data) {
+  async put(path, data, params) {
     try {
-      console.log('Making PUT request to:', getApiUrl(`api/${path}`), 'with data:', data);
-      const response = await fetch(getApiUrl(`api/${path}`), {
+      const url = new URL(getApiUrl(`api/${path}`));
+      if (params) {
+        Object.keys(params).forEach(key => 
+          url.searchParams.append(key, params[key])
+        );
+      }
+      console.log('Making PUT request to:', url.toString(), 'with data:', data);
+      const response = await fetch(url.toString(), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify(data),
+        body: data ? JSON.stringify(data) : null,
       });
       return handleResponse(response);
     } catch (error) {
@@ -63,10 +77,16 @@ const apiClient = {
     }
   },
 
-  async delete(path) {
+  async delete(path, params) {
     try {
-      console.log('Making DELETE request to:', getApiUrl(`api/${path}`));
-      const response = await fetch(getApiUrl(`api/${path}`), {
+      const url = new URL(getApiUrl(`api/${path}`));
+      if (params) {
+        Object.keys(params).forEach(key => 
+          url.searchParams.append(key, params[key])
+        );
+      }
+      console.log('Making DELETE request to:', url.toString());
+      const response = await fetch(url.toString(), {
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
