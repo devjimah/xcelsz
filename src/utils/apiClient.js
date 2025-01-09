@@ -5,8 +5,11 @@ const apiClient = {
     try {
       const response = await fetch(getApiUrl(`api/${path}`), {
         headers: {
-          'Accept': 'application/json'
-        }
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        mode: 'cors'
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
@@ -27,6 +30,8 @@ const apiClient = {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
+        credentials: 'include',
+        mode: 'cors',
         body: JSON.stringify(data),
       });
       if (!response.ok) {
@@ -48,6 +53,8 @@ const apiClient = {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
+        credentials: 'include',
+        mode: 'cors',
         body: JSON.stringify(data),
       });
       if (!response.ok) {
@@ -66,8 +73,11 @@ const apiClient = {
       const response = await fetch(getApiUrl(`api/${path}`), {
         method: 'DELETE',
         headers: {
-          'Accept': 'application/json'
-        }
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        mode: 'cors'
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
