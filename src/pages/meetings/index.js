@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import MeetingsCalendar from '@/components/MeetingsCalendar';
-import MeetingsList from '@/components/MeetingsList';
+import MeetingList from '@/components/MeetingList';
 import Layout from '@/components/Layout';
 import { useRouter } from 'next/router';
 import apiClient from '@/utils/apiClient';
@@ -115,7 +115,7 @@ export default function MeetingsPage() {
           />
         </TabPanel>
         <TabPanel value={activeTab} index={1}>
-          <MeetingsList 
+          <MeetingList 
             meetings={meetings}
             onDelete={handleDeleteMeeting}
             onRefresh={fetchMeetings}
