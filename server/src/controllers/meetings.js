@@ -137,31 +137,39 @@ exports.createMeeting = async (req, res) => {
         received: duration
       });
     }
-    
-    // Create the meeting
-    const meeting = await Meeting.create({
-      hostId,
-      participantId,
-      startTime: meetingStartTime,
-      duration: durationNum,
-      title,
-      description: description || '',
-      status: 'scheduled',
-      timezone: timezone || 'UTC'
+
+    // Start a transaction
+    const result = await db.sequelize.transaction(async (t) => {
+      // Create the meeting
+      const meeting = await Meeting.create({
+        hostId,
+        participantId,
+        startTime: meetingStartTime,
+        duration: durationNum,
+        title,
+        description: description || '',
+        status: 'scheduled',
+        timezone: timezone || 'UTC'
+      }, { transaction: t });
+
+      console.log('Created meeting:', meeting.toJSON());
+
+      // Create notification for participant
+      const notification = await Notification.create({
+        userId: participantId,
+        type: 'MEETING_INVITATION',
+        title: 'New Meeting Invitation',
+        message: `You have been invited to a meeting: ${title}`,
+        relatedId: meeting.id,
+        read: false
+      }, { transaction: t });
+
+      console.log('Created notification:', notification.toJSON());
+
+      return { meeting, notification };
     });
 
-    console.log('Created meeting:', meeting.toJSON());
-
-    // Create notification for participant
-    await Notification.create({
-      userId: participantId,
-      type: 'MEETING_INVITATION',
-      message: `You have been invited to a meeting: ${title}`,
-      relatedId: meeting.id,
-      read: false
-    });
-
-    res.status(201).json({ meeting });
+    res.status(201).json({ meeting: result.meeting });
   } catch (error) {
     console.error('Error creating meeting:', error);
     res.status(500).json({ 
@@ -258,15 +266,19 @@ exports.deleteMeeting = async (req, res) => {
       return res.status(404).json({ error: 'Meeting not found' });
     }
 
-    await meeting.update({ status: 'cancelled' });
-    
-    // Notify participants
-    await Notification.create({
-      userId: meeting.participantId,
-      type: 'MEETING_CANCELLED',
-      message: `Meeting "${meeting.title}" has been cancelled`,
-      relatedId: meeting.id,
-      read: false
+    // Start a transaction
+    await db.sequelize.transaction(async (t) => {
+      await meeting.update({ status: 'cancelled' }, { transaction: t });
+      
+      // Notify participants
+      await Notification.create({
+        userId: meeting.participantId,
+        type: 'MEETING_CANCELLED',
+        title: 'Meeting Cancelled',
+        message: `Meeting "${meeting.title}" has been cancelled`,
+        relatedId: meeting.id,
+        read: false
+      }, { transaction: t });
     });
 
     res.json({ message: 'Meeting cancelled successfully' });
