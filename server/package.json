@@ -1,0 +1,26 @@
+{
+  "name": "xcelsz-task-server",
+  "version": "1.0.0",
+  "description": "Backend server for xcelsz-task",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "build": "npm install",
+    "dev": "nodemon src/server.js",
+    "migrate": "sequelize db:migrate",
+    "migrate:undo": "sequelize db:migrate:undo",
+    "seed": "sequelize db:seed:all"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.18.2",
+    "sequelize": "^6.37.5",
+    "sqlite3": "^5.1.7",
+    "uuid": "^11.0.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "sequelize-cli": "^6.6.2"
+  }
+}
