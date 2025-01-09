@@ -18,15 +18,17 @@ const limiter = rateLimit({
 
 // CORS configuration
 const corsOptions = {
-  origin: 'http://localhost:3000',
+  origin: ['http://localhost:3000', 'https://xcelsz.onrender.com'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: false
+  optionsSuccessStatus: 200
 };
 
 // Middleware
 app.use(helmet({
-  crossOriginResourcePolicy: false
+  crossOriginResourcePolicy: false,
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: false
 }));
 app.use(compression());
 app.use(limiter);
@@ -70,6 +72,6 @@ db.sequelize.sync().then(() => {
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV}`);
-    console.log('CORS origin:', corsOptions.origin);
+    console.log('CORS origins:', corsOptions.origin);
   });
 });
