@@ -8,11 +8,11 @@
   },
   "scripts": {
     "start": "node src/server.js",
-    "build": "npm install && npm run migrate",
+    "build": "npm install && npx sequelize-cli db:migrate",
     "dev": "nodemon src/server.js",
-    "migrate": "sequelize db:migrate",
-    "migrate:undo": "sequelize db:migrate:undo",
-    "seed": "sequelize db:seed:all"
+    "migrate": "npx sequelize-cli db:migrate",
+    "migrate:undo": "npx sequelize-cli db:migrate:undo",
+    "seed": "npx sequelize-cli db:seed:all"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -23,10 +23,10 @@
     "uuid": "^11.0.4",
     "compression": "^1.7.4",
     "helmet": "^7.1.0",
-    "express-rate-limit": "^7.1.5"
+    "express-rate-limit": "^7.1.5",
+    "sequelize-cli": "^6.6.2"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2",
-    "sequelize-cli": "^6.6.2"
+    "nodemon": "^3.0.2"
   }
 }
