@@ -1,5 +1,15 @@
 import { getApiUrl } from '../config/api';
 
+const defaultHeaders = {
+  'Accept': 'application/json',
+  'Content-Type': 'application/json'
+};
+
+const defaultOptions = {
+  credentials: 'include',
+  headers: defaultHeaders
+};
+
 const handleResponse = async (response) => {
   if (!response.ok) {
     const errorData = await response.json().catch(() => null);
@@ -22,10 +32,8 @@ const apiClient = {
       }
       console.log('Making GET request to:', url.toString());
       const response = await fetch(url.toString(), {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
+        ...defaultOptions,
+        method: 'GET'
       });
       return handleResponse(response);
     } catch (error) {
@@ -39,11 +47,8 @@ const apiClient = {
       const url = getApiUrl(`api/${path}`);
       console.log('Making POST request to:', url, 'with data:', data);
       const response = await fetch(url, {
+        ...defaultOptions,
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
         body: JSON.stringify(data),
       });
       return handleResponse(response);
@@ -53,22 +58,14 @@ const apiClient = {
     }
   },
 
-  async put(path, data, params) {
+  async put(path, data) {
     try {
-      const url = new URL(getApiUrl(`api/${path}`));
-      if (params) {
-        Object.keys(params).forEach(key => 
-          url.searchParams.append(key, params[key])
-        );
-      }
-      console.log('Making PUT request to:', url.toString(), 'with data:', data);
-      const response = await fetch(url.toString(), {
+      const url = getApiUrl(`api/${path}`);
+      console.log('Making PUT request to:', url, 'with data:', data);
+      const response = await fetch(url, {
+        ...defaultOptions,
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: data ? JSON.stringify(data) : null,
+        body: JSON.stringify(data),
       });
       return handleResponse(response);
     } catch (error) {
@@ -77,21 +74,13 @@ const apiClient = {
     }
   },
 
-  async delete(path, params) {
+  async delete(path) {
     try {
-      const url = new URL(getApiUrl(`api/${path}`));
-      if (params) {
-        Object.keys(params).forEach(key => 
-          url.searchParams.append(key, params[key])
-        );
-      }
-      console.log('Making DELETE request to:', url.toString());
-      const response = await fetch(url.toString(), {
-        method: 'DELETE',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
+      const url = getApiUrl(`api/${path}`);
+      console.log('Making DELETE request to:', url);
+      const response = await fetch(url, {
+        ...defaultOptions,
+        method: 'DELETE'
       });
       return handleResponse(response);
     } catch (error) {

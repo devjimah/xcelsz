@@ -18,9 +18,15 @@ const limiter = rateLimit({
 
 // CORS configuration
 const corsOptions = {
-  origin: ['http://localhost:3000', 'https://xcelsz.onrender.com'],
+  origin: [
+    'http://localhost:3000',
+    'https://xcelsz.onrender.com',
+    'https://xcelsz-three.vercel.app',
+    /\.vercel\.app$/  // Allow all vercel.app subdomains for preview deployments
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
   optionsSuccessStatus: 200
 };
 
