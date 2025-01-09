@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { 
   Box, 
   Grid, 
-  Button, 
   Typography, 
   CircularProgress,
   Alert,
@@ -15,7 +14,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { format, parseISO } from 'date-fns';
 import apiClient from '@/utils/apiClient';
 
-export default function AvailabilityPicker({ onTimeSelect, userId }) {
+export default function AvailabilityPicker({ onTimeSelect, userId, duration = 30 }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [availableSlots, setAvailableSlots] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -26,11 +25,40 @@ export default function AvailabilityPicker({ onTimeSelect, userId }) {
     setError('');
     try {
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      console.log('Fetching availability with:', {
+        userId,
+        date: date.toISOString(),
+        timezone,
+        duration
+      });
+
       const data = await apiClient.get(
-        `meetings/availability?userId=${userId}&date=${date.toISOString()}&timezone=${timezone}`
+        `meetings/availability?userId=${userId}&date=${date.toISOString()}&timezone=${timezone}&duration=${duration}`
       );
-      setAvailableSlots(data.availableSlots);
+
+      console.log('Received availability data:', data);
+
+      if (!Array.isArray(data.availableSlots)) {
+        throw new Error('Invalid response format: availableSlots is not an array');
+      }
+
+      // Validate each slot
+      const validSlots = data.availableSlots.filter(slot => {
+        try {
+          // Try parsing the dates to validate them
+          parseISO(slot.startTime);
+          parseISO(slot.endTime);
+          return true;
+        } catch (err) {
+          console.error('Invalid slot:', slot, err);
+          return false;
+        }
+      });
+
+      console.log('Valid slots:', validSlots);
+      setAvailableSlots(validSlots);
     } catch (err) {
+      console.error('Error fetching availability:', err);
       setError(err.message || 'Failed to fetch availability');
       setAvailableSlots([]);
     } finally {
@@ -42,17 +70,37 @@ export default function AvailabilityPicker({ onTimeSelect, userId }) {
     if (selectedDate) {
       fetchAvailability(selectedDate);
     }
-  }, [selectedDate]);
+  }, [selectedDate, duration]);
 
   const handleDateChange = (newDate) => {
     setSelectedDate(newDate);
   };
 
   const handleTimeSelect = (slot) => {
-    onTimeSelect({
-      startTime: slot.startTime,
-      endTime: slot.endTime
-    });
+    try {
+      // Validate the slot before passing it up
+      const startTime = parseISO(slot.startTime);
+      const endTime = parseISO(slot.endTime);
+      
+      onTimeSelect({
+        startTime: slot.startTime,
+        endTime: slot.endTime
+      });
+    } catch (err) {
+      console.error('Error handling time selection:', err);
+      setError('Invalid time slot selected');
+    }
+  };
+
+  const formatTimeSlot = (slot) => {
+    try {
+      const startTime = parseISO(slot.startTime);
+      const endTime = parseISO(slot.endTime);
+      return `${format(startTime, 'h:mm a')} - ${format(endTime, 'h:mm a')}`;
+    } catch (err) {
+      console.error('Error formatting time slot:', slot, err);
+      return 'Invalid Time';
+    }
   };
 
   return (
@@ -100,7 +148,7 @@ export default function AvailabilityPicker({ onTimeSelect, userId }) {
                   onClick={() => handleTimeSelect(slot)}
                 >
                   <Typography variant="body1">
-                    {format(parseISO(slot.startTime), 'h:mm a')}
+                    {formatTimeSlot(slot)}
                   </Typography>
                 </Paper>
               </Grid>

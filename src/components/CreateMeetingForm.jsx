@@ -19,7 +19,7 @@ import { DateTimePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import AvailabilityPicker from './AvailabilityPicker';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 const durations = [
   { value: 15, label: '15 minutes' },
@@ -53,7 +53,11 @@ export default function CreateMeetingForm({ onSubmit, userId }) {
   };
 
   const handleTimeSelect = (selectedTime) => {
-    setFormData(prev => ({ ...prev, startTime: selectedTime }));
+    console.log('Selected time:', selectedTime);
+    setFormData(prev => ({ 
+      ...prev, 
+      startTime: selectedTime.startTime // Store the ISO string
+    }));
     handleNext();
   };
 
@@ -83,6 +87,17 @@ export default function CreateMeetingForm({ onSubmit, userId }) {
     }
   };
 
+  const formatDateTime = (dateTimeString) => {
+    if (!dateTimeString) return '';
+    try {
+      const date = parseISO(dateTimeString);
+      return format(date, 'PPpp');
+    } catch (err) {
+      console.error('Error formatting date:', err);
+      return 'Invalid Date';
+    }
+  };
+
   const renderStepContent = (step) => {
     switch (step) {
       case 0:
@@ -99,7 +114,7 @@ export default function CreateMeetingForm({ onSubmit, userId }) {
             <TextField
               label="Description"
               multiline
-              rows={3}
+              rows={4}
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               disabled={loading}
@@ -109,13 +124,13 @@ export default function CreateMeetingForm({ onSubmit, userId }) {
               <InputLabel>Duration</InputLabel>
               <Select
                 value={formData.duration}
+                label="Duration"
                 onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
                 disabled={loading}
-                label="Duration"
               >
-                {durations.map(({ value, label }) => (
-                  <MenuItem key={value} value={value}>
-                    {label}
+                {durations.map((duration) => (
+                  <MenuItem key={duration.value} value={duration.value}>
+                    {duration.label}
                   </MenuItem>
                 ))}
               </Select>
@@ -124,9 +139,10 @@ export default function CreateMeetingForm({ onSubmit, userId }) {
         );
       case 1:
         return (
-          <AvailabilityPicker
+          <AvailabilityPicker 
             onTimeSelect={handleTimeSelect}
             userId={userId}
+            duration={formData.duration}
           />
         );
       case 2:
@@ -138,7 +154,7 @@ export default function CreateMeetingForm({ onSubmit, userId }) {
             <Box>
               <Typography variant="subtitle1">Title: {formData.title}</Typography>
               <Typography variant="subtitle1">
-                Time: {formData.startTime ? format(formData.startTime, 'PPpp') : ''}
+                Time: {formatDateTime(formData.startTime)}
               </Typography>
               <Typography variant="subtitle1">
                 Duration: {durations.find(d => d.value === formData.duration)?.label}
@@ -155,9 +171,7 @@ export default function CreateMeetingForm({ onSubmit, userId }) {
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%', maxWidth: 800 }}>
-      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
-
+    <Box>
       <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
         {steps.map((label) => (
           <Step key={label}>
@@ -166,35 +180,43 @@ export default function CreateMeetingForm({ onSubmit, userId }) {
         ))}
       </Stepper>
 
-      {renderStepContent(activeStep)}
-
-      <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
-        <Button
-          onClick={handleBack}
-          disabled={activeStep === 0 || loading}
-        >
-          Back
-        </Button>
-        
-        {activeStep === steps.length - 1 ? (
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={loading}
-            startIcon={loading ? <CircularProgress size={20} /> : null}
-          >
-            Schedule Meeting
-          </Button>
-        ) : (
-          <Button
-            variant="contained"
-            onClick={handleNext}
-            disabled={activeStep === 1 || loading}
-          >
-            Next
-          </Button>
+      <form onSubmit={handleSubmit}>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
         )}
-      </Box>
+
+        {renderStepContent(activeStep)}
+
+        <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between' }}>
+          <Button
+            onClick={handleBack}
+            disabled={activeStep === 0 || loading}
+          >
+            Back
+          </Button>
+          <Box>
+            {activeStep === steps.length - 1 ? (
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={loading}
+              >
+                {loading ? <CircularProgress size={24} /> : 'Create Meeting'}
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                onClick={handleNext}
+                disabled={loading || (activeStep === 0 && !formData.title)}
+              >
+                Next
+              </Button>
+            )}
+          </Box>
+        </Box>
+      </form>
     </Box>
   );
 }
