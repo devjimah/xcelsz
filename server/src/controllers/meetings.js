@@ -1,5 +1,78 @@
 const db = require('../models');
 const { Meeting, Notification } = db;
+const { Op } = db.Sequelize;
+const { startOfDay, endOfDay, addMinutes, format, parseISO } = require('date-fns');
+const { zonedTimeToUtc, utcToZonedTime } = require('date-fns-tz');
+
+// Generate time slots for a given date
+const generateTimeSlots = (date, timezone) => {
+  const slots = [];
+  let currentTime = new Date(date);
+  currentTime.setHours(9, 0, 0, 0); // Start at 9 AM
+
+  while (currentTime.getHours() < 17) { // Until 5 PM
+    slots.push(format(currentTime, 'HH:mm'));
+    currentTime = addMinutes(currentTime, 30); // 30-minute slots
+  }
+  return slots;
+};
+
+exports.getAvailability = async (req, res) => {
+  try {
+    const { userId, date, timezone } = req.query;
+    if (!userId || !date || !timezone) {
+      return res.status(400).json({ 
+        error: 'Missing required parameters',
+        required: ['userId', 'date', 'timezone'],
+        received: { userId, date, timezone }
+      });
+    }
+
+    // Parse the date and set to local timezone
+    const requestDate = parseISO(date);
+    const zonedDate = utcToZonedTime(requestDate, timezone);
+    
+    // Get all slots for the day
+    const allSlots = generateTimeSlots(zonedDate, timezone);
+
+    // Get booked meetings for the date
+    const bookedMeetings = await Meeting.findAll({
+      where: {
+        [Op.or]: [
+          { hostId: userId },
+          { participantId: userId }
+        ],
+        startTime: {
+          [Op.between]: [
+            startOfDay(zonedDate),
+            endOfDay(zonedDate)
+          ]
+        }
+      }
+    });
+
+    // Convert booked times to simple time format (HH:mm)
+    const bookedTimes = bookedMeetings.map(meeting => 
+      format(new Date(meeting.startTime), 'HH:mm')
+    );
+
+    // Filter out booked slots
+    const availableSlots = allSlots.filter(slot => !bookedTimes.includes(slot));
+
+    res.json({ 
+      availableSlots,
+      timezone,
+      date: format(zonedDate, 'yyyy-MM-dd')
+    });
+
+  } catch (error) {
+    console.error('Error getting availability:', error);
+    res.status(500).json({ 
+      error: 'Failed to get availability',
+      details: error.message 
+    });
+  }
+};
 
 exports.getMeetings = async (req, res) => {
   try {
