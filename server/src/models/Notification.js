@@ -3,7 +3,10 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Notification extends Model {
     static associate(models) {
-      // Define associations here if needed
+      Notification.belongsTo(models.Meeting, {
+        foreignKey: 'relatedId',
+        as: 'meeting'
+      });
     }
   }
 
@@ -19,7 +22,10 @@ module.exports = (sequelize, DataTypes) => {
     },
     type: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
+      validate: {
+        isIn: [['MEETING_INVITATION', 'MEETING_UPDATE', 'MEETING_CANCELLED', 'MEETING_RESCHEDULE']]
+      }
     },
     title: {
       type: DataTypes.STRING,
@@ -31,7 +37,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     relatedId: {
       type: DataTypes.UUID,
-      allowNull: true
+      allowNull: true,
+      references: {
+        model: 'Meetings',
+        key: 'id'
+      }
     },
     read: {
       type: DataTypes.BOOLEAN,
@@ -40,6 +50,17 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'Notification',
+    indexes: [
+      {
+        fields: ['userId']
+      },
+      {
+        fields: ['relatedId']
+      },
+      {
+        fields: ['read']
+      }
+    ]
   });
 
   return Notification;
