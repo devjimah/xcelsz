@@ -3,12 +3,11 @@
 module.exports = (sequelize, DataTypes) => {
   const Notification = sequelize.define('Notification', {
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.STRING,
       primaryKey: true
     },
     userId: {
-      type: DataTypes.UUID,
+      type: DataTypes.STRING,
       allowNull: false
     },
     type: {
@@ -24,7 +23,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     relatedId: {
-      type: DataTypes.UUID,
+      type: DataTypes.STRING,
       allowNull: true
     },
     read: {

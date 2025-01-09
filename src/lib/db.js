@@ -29,19 +29,19 @@ const Notification = require('../models/Notification')(sequelize, Sequelize.Data
 
 // Define associations
 Meeting.hasMany(Notification, {
-  foreignKey: 'relatedId',
-  constraints: false,
-  scope: {
-    type: {
-      [Sequelize.Op.like]: 'MEETING_%'
-    }
-  }
+  foreignKey: 'meetingId',
+  as: 'notifications'
+});
+
+Notification.belongsTo(Meeting, {
+  foreignKey: 'meetingId',
+  as: 'meeting'
 });
 
 // Sync database
 async function syncDatabase() {
   try {
-    await sequelize.sync();
+    await sequelize.sync({ force: true }); // This will drop and recreate all tables
     console.log('Database synced successfully');
   } catch (error) {
     console.error('Error syncing database:', error);
