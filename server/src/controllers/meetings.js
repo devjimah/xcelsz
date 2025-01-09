@@ -1,18 +1,24 @@
 const db = require('../models');
 const { Meeting, Notification } = db;
 const { Op } = db.Sequelize;
-const { startOfDay, endOfDay, addMinutes, format, parseISO } = require('date-fns');
+const { startOfDay, endOfDay, addMinutes, format, parseISO, setHours, setMinutes } = require('date-fns');
 const { zonedTimeToUtc, utcToZonedTime } = require('date-fns-tz');
 
 // Generate time slots for a given date
-const generateTimeSlots = (date, timezone) => {
+const generateTimeSlots = (date) => {
   const slots = [];
   let currentTime = new Date(date);
-  currentTime.setHours(9, 0, 0, 0); // Start at 9 AM
+  currentTime = setHours(currentTime, 9);
+  currentTime = setMinutes(currentTime, 0);
 
-  while (currentTime.getHours() < 17) { // Until 5 PM
-    slots.push(format(currentTime, 'HH:mm'));
-    currentTime = addMinutes(currentTime, 30); // 30-minute slots
+  const endTime = setHours(new Date(date), 17);
+
+  while (currentTime < endTime) {
+    slots.push({
+      startTime: currentTime.toISOString(),
+      endTime: addMinutes(currentTime, 30).toISOString()
+    });
+    currentTime = addMinutes(currentTime, 30);
   }
   return slots;
 };
@@ -33,7 +39,7 @@ exports.getAvailability = async (req, res) => {
     const zonedDate = utcToZonedTime(requestDate, timezone);
     
     // Get all slots for the day
-    const allSlots = generateTimeSlots(zonedDate, timezone);
+    const allSlots = generateTimeSlots(zonedDate);
 
     // Get booked meetings for the date
     const bookedMeetings = await Meeting.findAll({
@@ -51,13 +57,15 @@ exports.getAvailability = async (req, res) => {
       }
     });
 
-    // Convert booked times to simple time format (HH:mm)
-    const bookedTimes = bookedMeetings.map(meeting => 
-      format(new Date(meeting.startTime), 'HH:mm')
-    );
-
     // Filter out booked slots
-    const availableSlots = allSlots.filter(slot => !bookedTimes.includes(slot));
+    const availableSlots = allSlots.filter(slot => {
+      const slotStart = new Date(slot.startTime);
+      return !bookedMeetings.some(meeting => {
+        const meetingStart = new Date(meeting.startTime);
+        const meetingEnd = addMinutes(meetingStart, meeting.duration || 30);
+        return slotStart >= meetingStart && slotStart < meetingEnd;
+      });
+    });
 
     res.json({ 
       availableSlots,
@@ -109,16 +117,22 @@ exports.getMeeting = async (req, res) => {
 
 exports.createMeeting = async (req, res) => {
   try {
-    const meeting = await Meeting.create(req.body);
-    
+    const { hostId, participantId, startTime, duration, title, description } = req.body;
+    const meeting = await Meeting.create({
+      hostId,
+      participantId,
+      startTime,
+      duration,
+      title,
+      description
+    });
+
     // Create notification for participant
     await Notification.create({
-      userId: meeting.participantId,
-      type: 'MEETING_CREATED',
-      title: 'New Meeting Invitation',
-      message: `You have been invited to "${meeting.title}"`,
-      relatedId: meeting.id,
-      read: false
+      userId: participantId,
+      type: 'MEETING_INVITATION',
+      message: `You have been invited to a meeting: ${title}`,
+      meetingId: meeting.id
     });
 
     res.status(201).json({ meeting });
@@ -131,23 +145,30 @@ exports.createMeeting = async (req, res) => {
 exports.updateMeeting = async (req, res) => {
   try {
     const { id } = req.params;
-    const meeting = await Meeting.findByPk(id);
+    const { startTime, duration, title, description, status } = req.body;
     
+    const meeting = await Meeting.findByPk(id);
     if (!meeting) {
       return res.status(404).json({ error: 'Meeting not found' });
     }
 
-    await meeting.update(req.body);
-
-    // Create notification for update
-    await Notification.create({
-      userId: meeting.participantId,
-      type: 'MEETING_UPDATED',
-      title: 'Meeting Updated',
-      message: `The meeting "${meeting.title}" has been updated`,
-      relatedId: meeting.id,
-      read: false
+    await meeting.update({
+      startTime: startTime || meeting.startTime,
+      duration: duration || meeting.duration,
+      title: title || meeting.title,
+      description: description || meeting.description,
+      status: status || meeting.status
     });
+
+    // Create notification for status updates
+    if (status) {
+      await Notification.create({
+        userId: meeting.participantId,
+        type: 'MEETING_UPDATE',
+        message: `Meeting "${meeting.title}" has been ${status.toLowerCase()}`,
+        meetingId: meeting.id
+      });
+    }
 
     res.json({ meeting });
   } catch (error) {
@@ -169,14 +190,12 @@ exports.deleteMeeting = async (req, res) => {
     await Notification.create({
       userId: meeting.participantId,
       type: 'MEETING_CANCELLED',
-      title: 'Meeting Cancelled',
-      message: `The meeting "${meeting.title}" has been cancelled`,
-      relatedId: meeting.id,
-      read: false
+      message: `Meeting "${meeting.title}" has been cancelled`,
+      meetingId: meeting.id
     });
 
     await meeting.destroy();
-    res.status(204).end();
+    res.json({ message: 'Meeting deleted successfully' });
   } catch (error) {
     console.error('Error deleting meeting:', error);
     res.status(500).json({ error: 'Failed to delete meeting' });
