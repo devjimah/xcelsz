@@ -4,7 +4,6 @@ const apiClient = {
   async get(path) {
     try {
       const response = await fetch(getApiUrl(`api/${path}`), {
-        credentials: 'include',
         headers: {
           'Accept': 'application/json'
         }
@@ -24,7 +23,6 @@ const apiClient = {
     try {
       const response = await fetch(getApiUrl(`api/${path}`), {
         method: 'POST',
-        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
@@ -46,7 +44,6 @@ const apiClient = {
     try {
       const response = await fetch(getApiUrl(`api/${path}`), {
         method: 'PUT',
-        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
@@ -68,7 +65,6 @@ const apiClient = {
     try {
       const response = await fetch(getApiUrl(`api/${path}`), {
         method: 'DELETE',
-        credentials: 'include',
         headers: {
           'Accept': 'application/json'
         }
