@@ -8,7 +8,6 @@ const apiClient = {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         },
-        credentials: 'include',
         mode: 'cors'
       });
       if (!response.ok) {
@@ -30,7 +29,6 @@ const apiClient = {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        credentials: 'include',
         mode: 'cors',
         body: JSON.stringify(data),
       });
@@ -53,7 +51,6 @@ const apiClient = {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        credentials: 'include',
         mode: 'cors',
         body: JSON.stringify(data),
       });
@@ -76,7 +73,6 @@ const apiClient = {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         },
-        credentials: 'include',
         mode: 'cors'
       });
       if (!response.ok) {
