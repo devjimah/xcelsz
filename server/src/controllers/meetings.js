@@ -238,15 +238,45 @@ exports.updateMeeting = async (req, res) => {
       return res.status(404).json({ error: 'Meeting not found' });
     }
 
-    await meeting.update({
-      startTime: startTime || meeting.startTime,
-      duration: duration || meeting.duration,
-      title: title || meeting.title,
-      description: description || meeting.description,
-      status: status || meeting.status
+    // Start a transaction
+    const result = await db.sequelize.transaction(async (t) => {
+      // Update the meeting
+      await meeting.update({
+        startTime: startTime || meeting.startTime,
+        duration: duration || meeting.duration,
+        title: title || meeting.title,
+        description: description || meeting.description,
+        status: status || meeting.status
+      }, { transaction: t });
+
+      // Create notification for status updates
+      if (status) {
+        await Notification.create({
+          userId: meeting.participantId,
+          type: 'MEETING_UPDATE',
+          title: 'Meeting Update',
+          message: `Meeting "${meeting.title}" has been ${status.toLowerCase()}`,
+          relatedId: meeting.id,
+          read: false
+        }, { transaction: t });
+      }
+
+      // Create notification for time/duration updates
+      if (startTime || duration) {
+        await Notification.create({
+          userId: meeting.participantId,
+          type: 'MEETING_RESCHEDULE',
+          title: 'Meeting Rescheduled',
+          message: `Meeting "${meeting.title}" has been rescheduled`,
+          relatedId: meeting.id,
+          read: false
+        }, { transaction: t });
+      }
+
+      return { meeting };
     });
 
-    res.json({ meeting });
+    res.json({ meeting: result.meeting });
   } catch (error) {
     console.error('Error updating meeting:', error);
     res.status(500).json({ 
